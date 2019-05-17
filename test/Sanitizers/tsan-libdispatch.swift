@@ -1,6 +1,6 @@
-// RUN: %target-swiftc_driver %s -target %sanitizers-target-triple -g -sanitize=thread %import-libdispatch -o %t_tsan-binary
+// RUN: %target-swiftc_driver %s -g -sanitize=thread %import-libdispatch -o %t_tsan-binary
 // RUN: %target-codesign %t_tsan-binary
-// RUN: not %target-run %t_tsan-binary 2>&1 | %FileCheck %s
+// RUN: not env %env-TSAN_OPTIONS=abort_on_error=0 %target-run %t_tsan-binary 2>&1 | %FileCheck %s
 // REQUIRES: executable_test
 // REQUIRES: tsan_runtime
 // UNSUPPORTED: OS=tvos
@@ -13,24 +13,30 @@
 
 import Dispatch
 
-let sem = DispatchSemaphore(value: 0)
-let q = DispatchQueue.global(qos: .default)
+let sem1 = DispatchSemaphore(value: 0)
+let sem2 = DispatchSemaphore(value: 0)
+
+let q = DispatchQueue(label: "q", attributes: .concurrent)
 
 var racy = 1
 
-for _ in 1...1000 {
-  q.async {
-    racy = 2
-    sem.signal()
-  }
-  q.async {
-    racy = 3
-    sem.signal()
-  }
+q.async {
+  sem1.wait()
+  racy = 2
+  sem2.signal()
+}
+q.async {
+  sem1.wait()
+  racy = 3
+  sem2.signal()
 }
 
-for _ in 1...2000 {
-  sem.wait()
-}
+sem1.signal()
+sem1.signal()
+sem2.wait()
+sem2.wait()
+
+print("Done!")
 
 // CHECK: ThreadSanitizer: data race
+// CHECK: Done!

@@ -22,7 +22,7 @@ extension Foobar {
     }
 
     // We used to crash emitting the subscript function.
-    // CHECK: define {{(protected)?}} swiftcc { i8*, %T15tsan_coroutines1CC* } @"$s15tsan_coroutines6FoobarVyAA1CCAC5IndexVcir"
+    // CHECK: define{{( protected)?}} swiftcc { i8*, %T15tsan_coroutines1CC* } @"$s15tsan_coroutines6FoobarVyAA1CCAC5IndexVcir"
     @_borrowed
     public subscript(position: Index) -> C {
         return things.values[position.myIndex]
